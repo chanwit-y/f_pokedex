@@ -1,109 +1,107 @@
+import 'package:f_pokedex/widget/card.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 
-import 'detailPage.dart';
+import 'model/PokemonDetailModel.dart';
+import 'service/pokemon.dart';
 
 void main() {
   runApp(MaterialApp(
     title: "Pokedex",
     theme: ThemeData(useMaterial3: true),
-    home: const MyApp(),
+    home: MyApp(),
   ));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _pageSize = 20;
+  final _scorllcontroller = ScrollController();
+
+  var isLoading = false;
+  var pageIndex = 0;
+  List<PokemonDetail> data = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMore();
+    _scorllcontroller.addListener(_onScorll);
+  }
+
+  _onScorll() async {
+    if (_scorllcontroller.position.pixels ==
+        _scorllcontroller.position.maxScrollExtent) {
+      _loadMore();
+    }
+  }
+
+  _loadMore() async {
+    if (isLoading) return;
+    isLoading = true;
+    final result =
+        await PokedexService().getPokemon(_pageSize, pageIndex * _pageSize);
+    pageIndex++;
+    setState(() {
+      data.addAll(result);
+    });
+    isLoading = false;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  "Pokedex",
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                "Pokedex",
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              Expanded(
-                  child: GridView.count(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.all(10),
-                childAspectRatio: 1.4,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                crossAxisCount: 2,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      print("tap");
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const DetailPage()),
-                      );
-                    },
-                    child: Container(
+            ),
+            Expanded(
+              child: !isLoading && data.isNotEmpty
+                  ? GridView.count(
+                      controller: _scorllcontroller,
+                      physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.greenAccent,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            spreadRadius: 2,
-                            blurRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          // ElevatedButton(
-                          //     onPressed: () {
-                          //       //wrong way: use context in same level tree with MaterialApp
-                          //       Navigator.push(
-                          //           context,
-                          //           MaterialPageRoute(
-                          //               builder: (context) => DetailPage()));
-                          //     },
-                          //     child: const Text('SCAN')),
-                          const Positioned(
-                              child: Text(
-                            "Bulbasaur",
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                          )),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: SvgPicture.network(
-                              'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/1.svg',
-                              width: 100,
-                              height: 100,
-                            ),
-                          ),
-                        ],
-                      ),
+                      childAspectRatio: 1.4,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      crossAxisCount: 2,
+                      children: [
+                        ...data.map((e) => PokemonCard(
+                              pokemonDetail: e,
+                            )),
+                      ],
+                    )
+                  : const Center(
+                      child: CircularProgressIndicator(),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    color: Colors.teal[200],
-                    child: const Text('Heed not the rabble'),
-                  ),
-                ],
-              ))
-            ],
-          ),
+            ),
+            // Text(isLoadMore.toString()),
+            // if(isLoadMore)
+              // const Padding(
+              //   padding: EdgeInsets.all(8.0),
+              //   child: Center(
+              //     child: SizedBox(
+              //         height: 30, width: 30, child: CircularProgressIndicator()),
+              //   ),
+              // )
+          ],
         ),
-      );
+      ),
+    );
   }
 }
