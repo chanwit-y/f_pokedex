@@ -31,26 +31,28 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _loadMore();
-    _scorllcontroller.addListener(_onScorll);
+    // _scorllcontroller.addListener(_onScorll);
   }
 
-  _onScorll() async {
-    if (_scorllcontroller.position.pixels ==
-        _scorllcontroller.position.maxScrollExtent) {
+  bool _onScorllNotification(ScrollNotification scrollNoti) {
+    if (scrollNoti.metrics.pixels == scrollNoti.metrics.maxScrollExtent) {
       _loadMore();
     }
+    return true;
   }
 
   _loadMore() async {
     if (isLoading) return;
-    isLoading = true;
+    setState(() {
+      isLoading = true;
+    });
     final result =
         await PokedexService().getPokemon(_pageSize, pageIndex * _pageSize);
     pageIndex++;
     setState(() {
       data.addAll(result);
+      isLoading = false;
     });
-    isLoading = false;
   }
 
   @override
@@ -71,34 +73,41 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             Expanded(
-              child: !isLoading && data.isNotEmpty
-                  ? GridView.count(
-                      controller: _scorllcontroller,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.all(10),
-                      childAspectRatio: 1.4,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      crossAxisCount: 2,
-                      children: [
-                        ...data.map((e) => PokemonCard(
-                              pokemonDetail: e,
-                            )),
-                      ],
-                    )
-                  : const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+              child: Stack(
+                children: [
+                  Visibility(
+                      visible: data.isEmpty && isLoading,
+                      child: const Center(child: CircularProgressIndicator())),
+                  NotificationListener(
+                    onNotification: _onScorllNotification,
+                    child: GridView.count(
+                        controller: _scorllcontroller,
+                        crossAxisCount: 2,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.all(10),
+                        childAspectRatio: 1.4,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        children: [
+                          ...data.map((e) => PokemonCard(
+                                pokemonDetail: e,
+                              )),
+                        ]),
+                  ),
+                ],
+              ),
+
+             
             ),
-            // Text(isLoadMore.toString()),
-            // if(isLoadMore)
-              // const Padding(
-              //   padding: EdgeInsets.all(8.0),
-              //   child: Center(
-              //     child: SizedBox(
-              //         height: 30, width: 30, child: CircularProgressIndicator()),
-              //   ),
-              // )
+            if (data.isNotEmpty && isLoading)
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                child: Positioned(
+                  left: MediaQuery.of(context).size.width / 2 - 20,
+                  bottom: 0,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              )
           ],
         ),
       ),
